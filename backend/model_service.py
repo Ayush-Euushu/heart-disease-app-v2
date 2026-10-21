@@ -1,19 +1,27 @@
-﻿import os
+import os
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 import joblib
+import pickle
 import pandas as pd
 import numpy as np
 
-# Locate model file
+# Locate model and scaler files directly in the current backend folder
 CURRENT_DIR = Path(__file__).resolve().parent
 ROOT_DIR = CURRENT_DIR.parent
+
 MODEL_PATHS = [
-    ROOT_DIR / "heart_disease_model.pkl",
+    CURRENT_DIR / "heart_disease_xgb_model.pkl",
+    ROOT_DIR / "heart_disease_xgb_model.pkl",
     CURRENT_DIR / "heart_disease_model.pkl"
+]
+SCALER_PATHS = [
+    CURRENT_DIR / "scaler.pkl",
+    ROOT_DIR / "scaler.pkl"
 ]
 
 _model = None
+_scaler = None
 
 def get_model():
     """Load model singleton lazily."""
@@ -27,21 +35,32 @@ def get_model():
             return _model
 
     raise FileNotFoundError(
-        f"heart_disease_model.pkl not found in {[str(p) for p in MODEL_PATHS]}"
+        f"Model file not found in {[str(p) for p in MODEL_PATHS]}"
+    )
+
+def get_scaler():
+    """Load scaler singleton lazily."""
+    global _scaler
+    if _scaler is not None:
+        return _scaler
+
+    for p in SCALER_PATHS:
+        if p.exists():
+            try:
+                _scaler = joblib.load(p)
+            except Exception:
+                with open(p, 'rb') as f:
+                    _scaler = pickle.load(f)
+            return _scaler
+
+    raise FileNotFoundError(
+        f"scaler.pkl not found in {[str(p) for p in SCALER_PATHS]}"
     )
 
 def normalize_input(data: Dict[str, Any]) -> pd.DataFrame:
-    """
-    Validate, normalize, and construct the single-row DataFrame
-    with exact 13 features expected by the ColumnTransformer:
-    - Numerical: age, resting_blood_pressure, cholestoral, Max_heart_rate, oldpeak
-    - Categorical: sex, chest_pain_type, fasting_blood_sugar, rest_ecg,
-                   exercise_induced_angina, slope, vessels_colored_by_flourosopy, thalassemia
-    """
-    # 1. Age
+    """Validate, normalize, and construct the single-row DataFrame."""
     age = float(data.get("age", 50))
 
-    # 2. Sex -> ['Female', 'Male']
     sex_raw = str(data.get("sex", "")).strip().lower()
     if sex_raw in ["1", "male", "m", "true"]:
         sex = "Male"
@@ -50,7 +69,6 @@ def normalize_input(data: Dict[str, Any]) -> pd.DataFrame:
     else:
         sex = "Male" if "mal" in sex_raw and "fe" not in sex_raw else "Female"
 
-    # 3. Chest Pain Type -> ['Asymptomatic', 'Atypical angina', 'Non-anginal pain', 'Typical angina']
     cp_raw = str(data.get("chest_pain_type", "")).strip().lower()
     if "asymptomatic" in cp_raw or cp_raw == "3":
         cp = "Asymptomatic"
@@ -63,24 +81,15 @@ def normalize_input(data: Dict[str, Any]) -> pd.DataFrame:
     else:
         cp = "Typical angina"
 
-    # 4. Resting Blood Pressure
     trestbps = float(data.get("resting_blood_pressure", 120))
-
-    # 5. Cholestoral
     chol = float(data.get("cholestoral", 200))
 
-    # 6. Fasting Blood Sugar -> ['Greater than 120 mg/ml', 'Lower than 120 mg/ml']
     fbs_raw = str(data.get("fasting_blood_sugar", "")).strip().lower()
-    if (
-        "greater" in fbs_raw
-        or ">" in fbs_raw
-        or fbs_raw in ["1", "true", "yes"]
-    ):
+    if "greater" in fbs_raw or ">" in fbs_raw or fbs_raw in ["1", "true", "yes"]:
         fbs = "Greater than 120 mg/ml"
     else:
         fbs = "Lower than 120 mg/ml"
 
-    # 7. Rest ECG -> ['Left ventricular hypertrophy', 'Normal', 'ST-T wave abnormality']
     ecg_raw = str(data.get("rest_ecg", "")).strip().lower()
     if "hypertrophy" in ecg_raw or "lvh" in ecg_raw or ecg_raw == "2":
         ecg = "Left ventricular hypertrophy"
@@ -89,20 +98,16 @@ def normalize_input(data: Dict[str, Any]) -> pd.DataFrame:
     else:
         ecg = "Normal"
 
-    # 8. Max_heart_rate
     thalach = float(data.get("Max_heart_rate", 150))
 
-    # 9. Exercise Induced Angina -> ['No', 'Yes']
     exang_raw = str(data.get("exercise_induced_angina", "")).strip().lower()
     if exang_raw in ["1", "yes", "y", "true"]:
         exang = "Yes"
     else:
         exang = "No"
 
-    # 10. Oldpeak
     oldpeak = float(data.get("oldpeak", 0.0))
 
-    # 11. Slope -> ['Downsloping', 'Flat', 'Upsloping']
     slope_raw = str(data.get("slope", "")).strip().lower()
     if "down" in slope_raw or slope_raw == "2":
         slope = "Downsloping"
@@ -113,7 +118,6 @@ def normalize_input(data: Dict[str, Any]) -> pd.DataFrame:
     else:
         slope = "Flat"
 
-    # 12. Vessels Colored by Flourosopy -> ['Four', 'One', 'Three', 'Two', 'Zero']
     ca_raw = str(data.get("vessels_colored_by_flourosopy", "")).strip().lower()
     ca_map = {
         "0": "Zero", "zero": "Zero",
@@ -124,7 +128,6 @@ def normalize_input(data: Dict[str, Any]) -> pd.DataFrame:
     }
     ca = ca_map.get(ca_raw, "Zero")
 
-    # 13. Thalassemia -> ['Fixed Defect', 'No', 'Normal', 'Reversable Defect']
     thal_raw = str(data.get("thalassemia", "")).strip().lower()
     if "fixed" in thal_raw or thal_raw == "2":
         thal = "Fixed Defect"
@@ -135,7 +138,6 @@ def normalize_input(data: Dict[str, Any]) -> pd.DataFrame:
     else:
         thal = "Normal"
 
-    # Construct DataFrame with precise column names required by ColumnTransformer
     row = {
         "age": age,
         "sex": sex,
@@ -152,11 +154,9 @@ def normalize_input(data: Dict[str, Any]) -> pd.DataFrame:
         "thalassemia": thal
     }
 
-    df = pd.DataFrame([row])
-    return df
+    return pd.DataFrame([row])
 
 def generate_insights(df: pd.DataFrame, probability: float) -> Tuple[str, List[str]]:
-    """Generate medical insights and clinical contributing factors based on patient data."""
     factors = []
     row = df.iloc[0]
 
@@ -196,16 +196,40 @@ def generate_insights(df: pd.DataFrame, probability: float) -> Tuple[str, List[s
     return summary, factors
 
 def predict_heart_disease(data: Dict[str, Any]) -> Dict[str, Any]:
-    """Execute prediction using pre-trained pipeline and return rich payload."""
     model = get_model()
-    df = normalize_input(data)
-
-    # Scikit-learn pipeline predict and predict_proba
-    pred = int(model.predict(df)[0])
-    probabilities = model.predict_proba(df)[0]
+    scaler = get_scaler()
     
-    # Class 1 is disease risk, Class 0 is healthy
-    prob_disease = float(probabilities[1])
+    df = normalize_input(data)
+    
+    categorical_cols = [
+        'sex', 'chest_pain_type', 'fasting_blood_sugar', 
+        'rest_ecg', 'exercise_induced_angina', 'slope', 
+        'vessels_colored_by_flourosopy', 'thalassemia'
+    ]
+    
+    df_encoded = pd.get_dummies(df, columns=categorical_cols)
+    
+    # Safely align feature names with fallback support
+    if hasattr(model, "feature_names_in_"):
+        expected_columns = [str(col) for col in model.feature_names_in_]
+    elif hasattr(scaler, "feature_names_in_"):
+        expected_columns = [str(col) for col in scaler.feature_names_in_]
+    else:
+        expected_columns = list(df_encoded.columns)
+    
+    for col in expected_columns:
+        if col not in df_encoded.columns:
+            df_encoded[col] = 0
+            
+    df_encoded = df_encoded[expected_columns]
+    
+    df_scaled = pd.DataFrame(scaler.transform(df_encoded), columns=expected_columns)
+    df_scaled.columns = [str(col) for col in df_scaled.columns]
+
+    probabilities = model.predict_proba(df_scaled)[0]
+    
+    # Class 0 = heart disease, Class 1 = healthy in this Logistic Regression model
+    prob_disease = float(probabilities[0])
     prob_pct = round(prob_disease * 100, 1)
 
     if prob_disease >= 0.65:
@@ -215,6 +239,8 @@ def predict_heart_disease(data: Dict[str, Any]) -> Dict[str, Any]:
     else:
         risk_level = "Low"
 
+    # Derive binary prediction from disease probability for consistency
+    pred = 1 if prob_disease >= 0.5 else 0
     status = "Heart Disease Risk" if pred == 1 else "Healthy"
     summary, contributing_factors = generate_insights(df, prob_disease)
 

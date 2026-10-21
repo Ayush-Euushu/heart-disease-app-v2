@@ -19,7 +19,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Cardiovascular Heart Disease Prediction API",
-    description="High-precision ML prediction service based on a trained Random Forest Scikit-learn Pipeline",
+    description="High-precision ML prediction service based on a tuned Logistic Regression with StandardScaler Pipeline",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -101,37 +101,37 @@ def get_presets():
     return {
         "healthy_profile": {
             "name": "Healthy Patient Profile",
-            "description": "60yo male, typical angina, normal ECG, lower risk indicators",
+            "description": "38yo female, typical angina, normal ECG, high max HR (188 bpm), zero vessels, favorable indicators",
             "data": {
-                "age": 60,
-                "sex": "Male",
+                "age": 38,
+                "sex": "Female",
                 "chest_pain_type": "Typical angina",
-                "resting_blood_pressure": 130,
-                "cholestoral": 250,
+                "resting_blood_pressure": 110,
+                "cholestoral": 175,
                 "fasting_blood_sugar": "Lower than 120 mg/ml",
                 "rest_ecg": "Normal",
-                "Max_heart_rate": 135,
-                "exercise_induced_angina": "Yes",
-                "oldpeak": 2.5,
-                "slope": "Flat",
-                "vessels_colored_by_flourosopy": "Two",
-                "thalassemia": "Reversable Defect"
+                "Max_heart_rate": 188,
+                "exercise_induced_angina": "No",
+                "oldpeak": 0.0,
+                "slope": "Upsloping",
+                "vessels_colored_by_flourosopy": "Zero",
+                "thalassemia": "Normal"
             }
         },
         "moderate_risk": {
             "name": "Moderate Risk Profile",
-            "description": "54yo male with mild hypertension and elevated cholesterol",
+            "description": "55yo male, atypical angina, ST-T abnormality, mild oldpeak, 1 vessel",
             "data": {
-                "age": 54,
+                "age": 55,
                 "sex": "Male",
-                "chest_pain_type": "Non-anginal pain",
-                "resting_blood_pressure": 138,
-                "cholestoral": 248,
+                "chest_pain_type": "Atypical angina",
+                "resting_blood_pressure": 135,
+                "cholestoral": 230,
                 "fasting_blood_sugar": "Lower than 120 mg/ml",
                 "rest_ecg": "ST-T wave abnormality",
-                "Max_heart_rate": 142,
+                "Max_heart_rate": 145,
                 "exercise_induced_angina": "No",
-                "oldpeak": 1.4,
+                "oldpeak": 1.2,
                 "slope": "Flat",
                 "vessels_colored_by_flourosopy": "One",
                 "thalassemia": "Normal"
@@ -139,21 +139,21 @@ def get_presets():
         },
         "high_risk_profile": {
             "name": "High Risk Patient Profile",
-            "description": "58yo female, asymptomatic angina, high HR, fixed thalassemia defect",
+            "description": "62yo male, asymptomatic, high BP, elevated fasting sugar, reversable defect, 3 vessels",
             "data": {
-                "age": 58,
-                "sex": "Female",
+                "age": 62,
+                "sex": "Male",
                 "chest_pain_type": "Asymptomatic",
-                "resting_blood_pressure": 140,
-                "cholestoral": 240,
-                "fasting_blood_sugar": "Lower than 120 mg/ml",
-                "rest_ecg": "Normal",
-                "Max_heart_rate": 165,
-                "exercise_induced_angina": "No",
-                "oldpeak": 0.5,
-                "slope": "Upsloping",
-                "vessels_colored_by_flourosopy": "Zero",
-                "thalassemia": "Fixed Defect"
+                "resting_blood_pressure": 150,
+                "cholestoral": 280,
+                "fasting_blood_sugar": "Greater than 120 mg/ml",
+                "rest_ecg": "Left ventricular hypertrophy",
+                "Max_heart_rate": 120,
+                "exercise_induced_angina": "Yes",
+                "oldpeak": 2.8,
+                "slope": "Downsloping",
+                "vessels_colored_by_flourosopy": "Three",
+                "thalassemia": "Reversable Defect"
             }
         }
     }
