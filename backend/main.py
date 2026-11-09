@@ -21,7 +21,8 @@ app = FastAPI(
     title="Cardiovascular Heart Disease Prediction API",
     description="High-precision ML prediction service based on a tuned Logistic Regression with StandardScaler Pipeline",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    root_path="/api"
 )
 
 # Enable CORS for Next.js frontend
