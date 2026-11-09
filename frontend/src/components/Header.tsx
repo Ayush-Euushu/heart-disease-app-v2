@@ -15,8 +15,8 @@ export const Header: React.FC<HeaderProps> = ({ onOpenGuide }) => {
   useEffect(() => {
     const checkBackend = async () => {
       try {
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
-        const res = await fetch(`${API_URL}/health`, { method: 'GET', cache: 'no-store' });
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+        const res = await fetch(`${API_URL}/api/health`, { method: 'GET', cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
           if (data.status === 'healthy') {
